@@ -10,7 +10,7 @@ all_bids = []
 S = 40 # nombre d'agents
 for i in range (S) :
     price = np.random.random() - 0.5
-    location = np.random.randint(1,5)
+    location = np.random.randint(1,6) # => de 1 à 5
     quantity = 0
     if price < 0 : 
         quantity = 1
@@ -38,7 +38,7 @@ def make_var(i):
 def optimization(new_bids) :
     A = len(new_bids)
     prob = pulp.LpProblem("Winner", pulp.LpMaximize)
-    wvars = [make_var(i) for i in range(S)]
+    wvars = [make_var(i) for i in range(A)]
     prob += pulp.lpSum(new_bids[i][0]*wvars[i] for i in range(A))
     prob += pulp.lpSum(new_bids[i][1][1]*wvars[i] for i in range(A)) >= 0
     for i in range(A):
