@@ -75,11 +75,17 @@ def optimization(new_bids) :
     pulp.LpStatus[prob.solve()]
 
     # on peut afficher les variables de décisions, si wi = 1 => l'offre de l'agent i choisie
-    print("WD = ", pulp.value(prob.objective), "\nVariables de décisions : ", [pulp.value(wvars[i]) for i in range(A)])
+    #print("WD = ", pulp.value(prob.objective), "\nVariables de décisions : ", [pulp.value(wvars[i]) for i in range(A)])
     cnt = 0 # comptele nb de wi à 1
     for i in range (A) :
         cnt += pulp.value(wvars[i])
     print("cnt = ", cnt, " sur ", len(new_bids))
+    
+    winning_bids = [new_bids[i] for i in range(A) if pulp.value(wvars[i]) == 1]
+    print("Winning bids:")
+    for i, bid in enumerate(winning_bids):
+        print(f"  Bid {i+1}: {bid}")
+    print("\n")
 
 
 #print(all_bids)
