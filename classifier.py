@@ -1,3 +1,5 @@
+import csv
+from collections import defaultdict
 import numpy as np
 from sklearn import preprocessing
 from sklearn.linear_model import LogisticRegression
@@ -6,47 +8,98 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
 from matplotlib import pyplot
-import csv
 
 
+nom_fichier = './Twitch_game_data.csv' # Nom du fichier CSV contenant les données
 
-nom_fichier = './twitchdata-update.csv'
+# Initialisation d'un dictionnaire vide
+donnees = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
 
-donnees = []
 
-# Ouverture du fichier CSV en mode lecture
-with open(nom_fichier, mode='r', newline='', encoding='utf-8') as fichier_csv:
-    # Création d'un lecteur CSV
-    lecteur_csv = csv.reader(fichier_csv)
+with open(nom_fichier, mode='r', newline='', encoding='cp1252') as fichier_csv:
+    lecteur_csv = csv.DictReader(fichier_csv)
     
     # Parcours des lignes du fichier CSV
     for ligne in lecteur_csv:
-        # Ajout de la ligne à la liste des données
-        donnees.append(ligne)
+        game_name = ligne['Game']
+        year = ligne['Year']
+        month = ligne['Month']
+        hours_watched = ligne['Hours_watched']
+        hours_streamed = ligne['Hours_streamed']
+        peak_viewers = ligne['Peak_viewers']
+        peak_channels = ligne['Peak_channels']
+        streamers = ligne['Streamers']
+        avg_viewers = ligne['Avg_viewers']
+        
+        # Ajout de chaque valeur à la liste appropriée dans le dictionnaire
+        donnees[game_name][year][month] = {'hours_watched': hours_watched, 'hours_streamed': hours_streamed, 'peak_viewers': peak_viewers, 'peak_channels': peak_channels, 'streamers': streamers, 'avg_viewers': avg_viewers}
+
+# On a un dictionnaire où chaque clé est un nom de jeu, chaque sous-clé est une année, chaque sous-sous-clé est un mois, et la valeur est un autre dictionnaire avec 'hours_watched' et 'hours_streamed'
+
+# On décide d'enlever les jeux du dictionnaire qui n'ont qu'une seule entrée de données
+# On crée une liste de jeux à enlever
+jeux_a_enlever = [game for game, data in donnees.items() if len(data) == 1]
+
+# Remove the games from the dictionary
+for game in jeux_a_enlever:
+    del donnees[game]
+
+# Maintenant le dictionnaire ne contient que des jeux avec plus d'une entrée de données
+
+# On converti le dictionnaire en un dictionnaire régulier
+def defaultdict_to_dict(d):
+    if isinstance(d, defaultdict):
+        d = {k: defaultdict_to_dict(v) for k, v in d.items()}
+    return d
+
+donnees_dict = defaultdict_to_dict(donnees)
 
 
+# Affichage de tous les éléments du dictionnaire
+for game_name, game_data in donnees_dict.items():
+    print(f"{game_name}: {game_data}\n")
 
+# Ou afficher seulement les premiers éléments de chaque jeu
+for game_name, game_data in list(donnees_dict.items())[:5]:
+    print(f"{game_name}: {game_data}\n")
 
-# generate data
-iter = 1000 # number of data samples
-#dim = 7 # dimension of each sample
-X = [[] for i in range(iter)]
-for i in range (iter) :
-    X[i].append(donnees[i][1])
-    X[i].append(donnees[i][2])
-    X[i].append(donnees[i][3])
-    X[i].append(donnees[i][4])
-    X[i].append(donnees[i][5])
-y = [[] for i in range(iter)]
-for i in range (iter) :
-    y[i].append(donnees[i][6])
+########################################################
 
+#Une fois le dictionnaire créé, on va l'utiliser pour le Logistic Classifier
+
+# On choisi un jeu 
+jeu_choisi = "Call of Duty: Modern Warfare II"
+
+# On vérifie si le jeu existe dans le dictionnaire
+if jeu_choisi in donnees_dict:
+    game_data = donnees_dict[jeu_choisi]
+    
+    # Initialisation d'une liste vide pour stocker les données hours_watched
+    hours_watched_data = []
+    
+    # Parcours des données du jeu
+    for year, year_data in game_data.items():
+        for month, month_data in year_data.items():
+            hours_watched_data.append(month_data['hours_watched'])
+    
+    # Conversion de la liste en un tableau numpy
+    X = np.array(hours_watched_data, dtype=float).reshape(-1, 1)
+else:
+    print(f"Le jeu {jeu_choisi} n'apparaît pas dans le dictionnaire.")
+
+print(X)
+
+# On peut maintenant utiliser X pour entraîner un modèle de régression logistique
+
+# y est construit à partir d'une condition. Cependant, celle-ci est des fois toujours vraie (ou toujours fausse), ce qui ne permet pas de tester le modèle. Il faut trouver une bonne définition de y
+y = np.where(X > 10000000, 1, 0)
+print(y)
 # Preprocessing (scale the data set)
 scaler = preprocessing.StandardScaler().fit(X)
 X_scaled = scaler.transform(X)
 
 # build train/test datasets
-trainX, testX, trainy, testy = train_test_split(X_scaled, y, test_size=0.5, random_state=None)
+trainX, testX, trainy, testy = train_test_split(X_scaled, y, test_size=0.5, random_state=None) # Quelle test_size mettre?
 
 # fit a model
 model = LogisticRegression(solver='liblinear',max_iter=500) # Logistic model
@@ -54,7 +107,6 @@ model.fit(trainX, trainy)
 
 # predict probabilities
 lr_probs = model.predict_proba(testX)
-print(lr_probs)
 # keep probabilities for the positive outcome only
 lr_probs = lr_probs[:, 1]
 
@@ -64,3 +116,9 @@ for j in range(len(lr_probs)):
     if temp != testy[j]:
         error = error + 1/len(lr_probs)
 print(error)
+
+# Clacul de b
+
+b = 1 - error
+
+print(b)
