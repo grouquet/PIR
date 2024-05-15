@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
 from matplotlib import pyplot
-
+import random
 
 nom_fichier = './Twitch_game_data.csv' # Nom du fichier CSV contenant les données
 
@@ -79,6 +79,9 @@ print(f"First value: {first_value}")
 '''
 
 
+###############################################################################
+
+# Côté vendeur
 all_bids = [] # all_bids va contenir toutes les offres du marché
 
 q_size = 96 # taille du vecteur q <=> nombre de types de données différents
@@ -169,29 +172,102 @@ print(all_bids[0])
 print(len(all_bids))
 '''
 
+###############################################################################
+
+# Côté acheteur
+
+#Une fois le dictionnaire créé, on va l'utiliser pour le Logistic Classifier
+
+def classifier():
+
+    # On choisi un jeu 
+    jeu = random.choice(list(donnees_dict.keys())) # on choisit un jeu aléatoire dans le dictionnaire
+    game_data = donnees_dict[jeu]
+        
+    # Initialisation d'une liste vide pour stocker les données hours_watched
+    hours_watched_data = []
+    
+    # Parcours des données du jeu
+    for year, year_data in game_data.items():
+        for month, month_data in year_data.items():
+            hours_watched_data.append(month_data['hours_watched'])
+    
+    # Conversion de la liste en un tableau numpy
+    X = np.array(hours_watched_data, dtype=float).reshape(-1, 1)
+        
+
+    print(X)
+
+    # On choisi un seuil
+    while True:
+        seuil = np.random.randint(np.percentile(X, 25), np.percentile(X, 75)) # on choisit un seuil aléatoire entre le min et le max de X
+
+        # On peut maintenant utiliser X pour entraîner un modèle de régression logistique
+
+        # y est construit à partir d'une condition. Cependant, celle-ci est des fois toujours vraie (ou toujours fausse), ce qui ne permet pas de tester le modèle. Il faut trouver une bonne définition de y
+        y = np.where(X > seuil, 1, 0).flatten()
+        unique_classes = np.unique(y)
+        if len(unique_classes) > 1 and np.min(np.bincount(y)) > 1:
+            break
+
+    print(y)
+    # Preprocessing (scale the data set)
+    scaler = preprocessing.StandardScaler().fit(X)
+    X_scaled = scaler.transform(X)
+
+    # build train/test datasets
+    # build train/test datasets
+    trainX, testX, trainy, testy = train_test_split(X_scaled, y.flatten(), test_size=0.5, random_state=None, stratify=y.flatten()) # Quelle test_size mettre?
+    '''
+    trainX, testX, trainy, testy = train_test_split(X_scaled, y, test_size=0.5, random_state=None) # Quelle test_size mettre?
+    '''
+
+    # fit a model
+    model = LogisticRegression(solver='liblinear',max_iter=500) # Logistic model
+    model.fit(trainX, trainy)
+
+    # predict probabilities
+    lr_probs = model.predict_proba(testX)
+    # keep probabilities for the positive outcome only
+    lr_probs = lr_probs[:, 1]
+
+    error = 0
+    for j in range(len(lr_probs)):
+        temp = np.round(lr_probs[j])
+        if temp != testy[j]:
+            error = error + 1/len(lr_probs)
+
+
+    # Clacul de b
+
+    bmax = 1 - error
+
+    return bmax
+
+''' Exemple de jeu et seuil
+Call of Duty: Modern Warfare II
+10000000
+'''
+
+
 class Brands :
     def __init__(self) :
-        self.utility =[rd.random() for _ in range (10)] # chaque marque attribue une utilité ∈ [0,1] pour chaque type de donnée
         self.bid = ()
         
     # Chaque marque propose une bid: si son utilité pour un type de données dépasse un seuil, elle le demande => -1 dans q
-    def generate_bid(self, threshold):
-        b = 0
-        q = [0 for _ in range(10)] # on initialise q à [0(x10)]
-        for i, data_utility in enumerate(self.utility):
-            if data_utility > threshold :
-                q[i] = -1 # si l'utilité du type i est >threshold, on le demande
-                b += 2*data_utility # le b est la (somme des 1 dans q)*2 => ça assure que 
-        self.bid = (b, q)
+    def generate_bid(self):
+        bmax = classifier() # on récupère bmax
+        q_acheteur = [0 for _ in range(96)] # on initialise q à [0(x96)]
+        self.bid = (bmax, q_acheteur)
 
-nb_brands = 600
+nb_brands = 817 # nombre de jeux dans le dictionnaire
 
 brands_list = [Brands() for _ in range(nb_brands)]
 
-threshold = 0.5 # seuil d'utilité pour lequel les marques vondront les données, à voir si on le fait varier en fonction des marques
+
 # Générer une offre pour chaque marque dans la liste et l'ajouter au marché (all_bids)
 for brand in brands_list:
-    brand.generate_bid(threshold) #
+    brand.generate_bid() 
     all_bids.append(brand.bid)
 
 # !!! des bid = (b=0, q=[0(x10)]) apparaissent ducoup...
