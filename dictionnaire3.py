@@ -26,13 +26,9 @@ with open(nom_fichier, mode='r', newline='', encoding='cp1252') as fichier_csv:
         month = ligne['Month']
         hours_watched = ligne['Hours_watched']
         hours_streamed = ligne['Hours_streamed']
-        peak_viewers = ligne['Peak_viewers']
-        peak_channels = ligne['Peak_channels']
-        streamers = ligne['Streamers']
-        avg_viewers = ligne['Avg_viewers']
         
         # Ajout de chaque valeur à la liste appropriée dans le dictionnaire
-        donnees[game_name][year][month] = {'hours_watched': hours_watched, 'hours_streamed': hours_streamed, 'peak_viewers': peak_viewers, 'peak_channels': peak_channels, 'streamers': streamers, 'avg_viewers': avg_viewers}
+        donnees[game_name][year][month] = {'hours_watched': hours_watched, 'hours_streamed': hours_streamed}
 
 # On a un dictionnaire où chaque clé est un nom de jeu, chaque sous-clé est une année, chaque sous-sous-clé est un mois, et la valeur est un autre dictionnaire avec 'hours_watched' et 'hours_streamed'
 
@@ -67,7 +63,7 @@ for game_name, game_data in list(donnees_dict.items())[:5]:
 
 #Une fois le dictionnaire créé, on va l'utiliser pour le Logistic Classifier
 
-# On choisi un jeu 
+# On choisi un jeu
 jeu_choisi = "Call of Duty: Modern Warfare II"
 
 # On vérifie si le jeu existe dans le dictionnaire
@@ -99,7 +95,7 @@ scaler = preprocessing.StandardScaler().fit(X)
 X_scaled = scaler.transform(X)
 
 # build train/test datasets
-trainX, testX, trainy, testy = train_test_split(X_scaled, y, test_size=0.5, random_state=None) # Quelle test_size mettre?
+trainX, testX, trainy, testy = train_test_split(X_scaled, y, test_size=0.5, random_state=None)
 
 # fit a model
 model = LogisticRegression(solver='liblinear',max_iter=500) # Logistic model
