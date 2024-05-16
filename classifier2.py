@@ -38,7 +38,7 @@ with open(nom_fichier, mode='r', newline='', encoding='cp1252') as fichier_csv:
 
 # On décide d'enlever les jeux du dictionnaire qui n'ont qu'une seule entrée de données
 # On crée une liste de jeux à enlever
-jeux_a_enlever = [game for game, data in donnees.items() if len(data) == 1]
+jeux_a_enlever = [game for game, data in donnees.items() if len(data) < 4]
 
 # Remove the games from the dictionary
 for game in jeux_a_enlever:
@@ -63,6 +63,8 @@ for game_name, game_data in donnees_dict.items():
 # Ou afficher seulement les premiers éléments de chaque jeu
 for game_name, game_data in list(donnees_dict.items())[:5]:
     print(f"{game_name}: {game_data}\n")
+
+print(len(donnees_dict))
 
 ########################################################
 
