@@ -41,7 +41,7 @@ with open(nom_fichier, mode='r', newline='', encoding='cp1252') as fichier_csv:
 
 # On décide d'enlever les jeux du dictionnaire qui n'ont qu'une seule entrée de données
 # On crée une liste de jeux à enlever
-jeux_a_enlever = [game for game, data in donnees.items() if len(data) == 1]
+jeux_a_enlever = [game for game, data in donnees.items() if len(data) < 4]
 
 # On enlève les jeux de la liste des jeux à enlever
 for game in jeux_a_enlever:
@@ -156,32 +156,31 @@ def classifier():
     # Conversion de la liste en un tableau numpy
     X = np.array(hours_watched_data, dtype=float).reshape(-1, 1)
         
-
-    print(X)
+    print(f"jeu = {jeu}")
+    print(f"X = {X}")
 
     # On choisi un seuil
-    while True:
-        seuil = np.random.randint(np.percentile(X, 25), np.percentile(X, 75)) # on choisit un seuil aléatoire entre le min et le max de X
+    
+    seuil = np.median(X) # on choisit un seuil aléatoire entre le min et le max de X
 
-        # On peut maintenant utiliser X pour entraîner un modèle de régression logistique
+    # On peut maintenant utiliser X pour entraîner un modèle de régression logistique
 
-        # y est construit à partir d'une condition. Cependant, celle-ci est des fois toujours vraie (ou toujours fausse), ce qui ne permet pas de tester le modèle. Il faut trouver une bonne définition de y
-        y = np.where(X > seuil, 1, 0).flatten()
-        unique_classes = np.unique(y)
-        if len(unique_classes) > 1 and np.min(np.bincount(y)) > 1:
-            break
+    # y est construit à partir d'une condition. Cependant, celle-ci est des fois toujours vraie (ou toujours fausse), ce qui ne permet pas de tester le modèle. Il faut trouver une bonne définition de y
+    y = np.where(X > seuil, 1, 0).flatten()
+      
 
-    print(y)
+    print(f"y = {y}")
     # Preprocessing (scale the data set)
     scaler = preprocessing.StandardScaler().fit(X)
     X_scaled = scaler.transform(X)
 
     # build train/test datasets
     # build train/test datasets
+    '''
     trainX, testX, trainy, testy = train_test_split(X_scaled, y.flatten(), test_size=0.5, random_state=None, stratify=y.flatten()) # Quelle test_size mettre?
     '''
-    trainX, testX, trainy, testy = train_test_split(X_scaled, y, test_size=0.5, random_state=None) # Quelle test_size mettre?
-    '''
+    trainX, testX, trainy, testy = train_test_split(X_scaled, y, test_size=0.5, random_state=None,stratify=y.flatten()) # Quelle test_size mettre?
+    
 
     # fit a model
     model = LogisticRegression(solver='liblinear',max_iter=500) # Logistic model
@@ -221,7 +220,7 @@ class Brands :
         q_acheteur = [0 for _ in range(96)] # on initialise q à [0(x96)]
         self.bid = (bmax, q_acheteur)
 
-nb_brands = 817 # nombre de jeux dans le dictionnaire
+nb_brands = 292 # nombre de jeux dans le dictionnaire
 
 brands_list = [Brands() for _ in range(nb_brands)]
 
