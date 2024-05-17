@@ -24,7 +24,7 @@ donnees = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
 with open(nom_fichier, mode='r', newline='', encoding='cp1252') as fichier_csv:
     lecteur_csv = csv.DictReader(fichier_csv)
     
-    # Parcours des lignes du fichier CSV
+    # Parcours des lignes du fichier CSV pour le remplissage du dictionnaire
     for ligne in lecteur_csv:
         game_name = ligne['Game']
         year = ligne['Year']
@@ -41,7 +41,7 @@ with open(nom_fichier, mode='r', newline='', encoding='cp1252') as fichier_csv:
 
 # On a un dictionnaire où chaque clé est un nom de jeu, chaque sous-clé est une année, chaque sous-sous-clé est un mois, et la valeur est un autre dictionnaire avec 'hours_watched' et 'hours_streamed'
 
-# On décide d'enlever les jeux du dictionnaire qui n'ont qu'une seule entrée de données
+# On décide d'enlever les jeux du dictionnaire qui moins de 4 entrées de données pour faciliter le fonctionnement du Logistic Classifier
 # On crée une liste de jeux à  enlever
 jeux_a_enlever = [game for game, data in donnees.items() if len(data) < 4]
 
@@ -49,7 +49,7 @@ jeux_a_enlever = [game for game, data in donnees.items() if len(data) < 4]
 for game in jeux_a_enlever:
     del donnees[game]
 
-# Maintenant le dictionnaire ne contient que des jeux avec plus d'une entrée de données
+# Maintenant le dictionnaire ne contient que des jeux avec 4 entrées de données ou plus
 
 # On converti le dictionnaire en un dictionnaire régulier
 def defaultdict_to_dict(d):
@@ -60,21 +60,21 @@ def defaultdict_to_dict(d):
 donnees_dict = defaultdict_to_dict(donnees)
 
 '''
+# Différents tests à faire
 # Affichage de tous les éléments du dictionnaire
 for game_name, game_data in donnees_dict.items():
     print(f"{game_name}: {game_data}\n")
-'''
 
-'''
+    
 # Ou afficher seulement les premiers éléments de chaque jeu
 for game_name, game_data in list(donnees_dict.items())[:5]:
     print(f"{game_name}: {game_data}\n")
-'''
 
-'''
+    
 # Affichage du premier élément du dictionnaire (League of Legends) afin de faire des tests avec les q retournés par remplissage_q()
 first_key = next(iter(donnees_dict))
 first_value = donnees_dict[first_key]
+
 
 print(f"First key: {first_key}")
 print(f"First value: {first_value}")
@@ -89,20 +89,18 @@ def simulate_marketplace(nb_acheteurs,donnees_dict):
     # Côté vendeur
     all_bids = [] # all_bids va contenir toutes les offres du marché
 
-    q_size = 96 # taille du vecteur q <=> nombre de types de données différents
+    q_size = 96 # Taille du vecteur q <=> nombre de types de données différents = 8*12 = 96 (une entrée pour chaque mois entre 2016 et 2023)
 
 
-    # pas besoin de classes pour les org
-
-    # remplissage de all_q avec les vecteurs q possibles pour chaque jeu en fonction des données présentées dans la dataset
+    # Remplissage de all_q avec les vecteurs q possibles pour chaque jeu en fonction des données présentées dans la dataset
     def remplissage_q():
 
-        all_q = [] # all_q contient tous les vecteurs q possible (avec 0 et 1) => 817, un pour chaque jeu et vendeur
+        all_q = [] # all_q contient tous les vecteurs q possible (avec 0 et 1) 
         for game_name, game_data in donnees_dict.items():
-            q = [game_name] + [0]*q_size
+            q = [game_name] + [0]*q_size # On ajoute le nom du jeu au vecteur q
             for year, year_data in game_data.items():
                 for month, value in year_data.items():
-                    # on remplit q en fonction des données présentes par année et mois
+                    # On remplit q en fonction des données présentes par année et mois
                     if year == "2016":
                         k = 0
                     elif year == "2017":
@@ -146,42 +144,36 @@ def simulate_marketplace(nb_acheteurs,donnees_dict):
                     elif month == "12":
                         j = 11
                     
-                    q[j+k+1]= 1
+                    q[j+k+1]= 1 # +1 pour éviter de modifier la première entrée de q qui correspond au nom du jeu
             all_q.append(q)
         return all_q
 
     all_q = remplissage_q()
 
     '''
-    # On vérifie que tous les vecteurs q sont dans all_q (il y a bine 817 vecteurs q)
+    # Différents tests à faire
+    # On vérifie que tous les vecteurs q sont dans all_q 
     print(len(all_q))
-    '''
+    
 
-    '''
     #On vérifie que all_q est bien rempli
     print(all_q[0])
     '''
 
-    #on crée les bmin des vendeurs en fonction de chaque q
+    # On crée les bmin des vendeurs en fonction de chaque q
 
-    for q in all_q: # pour associer un bmin à  chaque q, on additionne le nombre de 1 dans q pouis on divise ce nombre par 96 (sorte de moyenne)
+    for q in all_q: # Pour associer un bmin à  chaque q, on additionne le nombre de 1 dans q puis on divise ce nombre par 96 (sorte de moyenne)
         nombre_de_uns = sum(q[1:])
-        bmin = nombre_de_uns / len(q[1:]) # + C RECENT + C CHER ???
+        bmin = nombre_de_uns / len(q[1:]) 
         bid = (-bmin, q)
         all_bids.append(bid)
         
-
-    '''
-    #On teste 
-    print(all_bids[0])
-    print(len(all_bids))
-    '''
 
     ###############################################################################
 
     # Côté acheteur
 
-    #Une fois le dictionnaire créé, on va l'utiliser pour le Logistic Classifier
+    # Une fois le dictionnaire créé, on va l'utiliser pour le Logistic Classifier pour déterminer le bmax des acheteurs
 
     def classifier(jeu):
 
@@ -189,53 +181,48 @@ def simulate_marketplace(nb_acheteurs,donnees_dict):
         while not seuil_trouvé :
             seuil_trouvé = True
 
-            game_data = donnees_dict[jeu]
-            #print("jeu", jeu)
+            game_data = donnees_dict[jeu] # Le classifier se lance individuellement pour chaque jeu. La variable jeu est d´terminée aléatoirement avec l'appel de la classe Brands définie plus bas
+
 
             # Initialisation d'une liste vide pour stocker les données hours_watched
             hours_watched_data = []
 
-            # Parcours des données du jeu
+            # Parcours des données du jeu pour récupérer les valers des Hours_watched qui sont celles qu'on a décidé de prendre en compte
             for year, year_data in game_data.items():
                 for month, month_data in year_data.items():
                     hours_watched_data.append(month_data['hours_watched'])
 
             # Conversion de la liste en un tableau numpy
             X = np.array(hours_watched_data, dtype=float).reshape(-1, 1)
-            #print("X = ",X)
+            
 
+            # On choisi alors un seuil qui marche pour cette série de valeurs
             max_iterations = 1000
             for _ in range(max_iterations):
-                seuil = np.random.randint(np.percentile(X, 25), np.percentile(X, 75))
+                seuil = np.random.randint(np.percentile(X, 25), np.percentile(X, 75)) # On choisit un seuil aléatoire entre le 1er et le 3ème quartile des valeurs de X
                 y = np.where(X > seuil, 1, 0).flatten()
                 unique_classes = np.unique(y)
-                if len(unique_classes) > 1 and np.min(np.bincount(y)) > 1:
+                if len(unique_classes) > 1 and np.min(np.bincount(y)) > 1: # On vérifie que les classes sont bien distribuées pour le bon fonctionnement du modèle
                     break
             else:
-                # Handle the case where a suitable seuil was not found
+                # Si le seuil n'est pas trouvé après max_iterations, on recommence
                 seuil_trouvé = False
                 break 
 
         if seuil_trouvé : 
-            #print("y = ",y)
-            # Preprocessing (scale the data set)
+            # Code base pour le classifier
             scaler = preprocessing.StandardScaler().fit(X)
             X_scaled = scaler.transform(X)
 
-            # build train/test datasets
-            # build train/test datasets
+            # On divise les données en données d'entraînement et de test
             trainX, testX, trainy, testy = train_test_split(X_scaled, y.flatten(), test_size=0.5, random_state=None, stratify=y.flatten()) # Quelle test_size mettre?
-            '''
-            trainX, testX, trainy, testy = train_test_split(X_scaled, y, test_size=0.5, random_state=None) # Quelle test_size mettre?
-            '''
 
-            # fit a model
             model = LogisticRegression(solver='liblinear',max_iter=500) # Logistic model
             model.fit(trainX, trainy)
 
-            # predict probabilities
+            # On prédit les probabilités
             lr_probs = model.predict_proba(testX)
-            # keep probabilities for the positive outcome only
+            # On ne garde que les probabilités pour la classe positive
             lr_probs = lr_probs[:, 1]
 
             error = 0
@@ -245,26 +232,21 @@ def simulate_marketplace(nb_acheteurs,donnees_dict):
                     error = error + 1/len(lr_probs)
 
 
-            # Clacul de b
+            # Clacul de bmax
 
             bmax = 1 - error
 
             return bmax
 
-    ''' Exemple de jeu et seuil
-    Call of Duty: Modern Warfare II
-    10000000
-    '''
-
-
+    # On définitit maintenant la classe Brands qui va permettre de générer les offres des acheteurs
     class Brands :
         def __init__(self) :
             self.bid = ()
             self.jeu = random.choice(list(donnees_dict.keys())) # on choisit un jeu aléatoire dans le dictionnaire
             
         def generate_bid(self):
-            bmax = classifier(self.jeu) # on récupère bmax
-            q_acheteur = [self.jeu] + [0 for _ in range(96)] # on initialise q à  [0(x96)]
+            bmax = classifier(self.jeu) # On récupère bmax
+            q_acheteur = [self.jeu] + [0 for _ in range(96)] # On initialise q à  [0(x96)] + le nom du jeu
             self.bid = (bmax, q_acheteur)
 
         #permet de demander les bons produits (dates disponibles)
@@ -280,7 +262,7 @@ def simulate_marketplace(nb_acheteurs,donnees_dict):
 
             
 
-    nb_brands = nb_acheteurs # ICI ON MET CE QU'ON VEUT DUCOUP
+    nb_brands = nb_acheteurs # On va modifier cette valeur pour le calcul du surplus
 
     brands_list = [Brands() for _ in range(nb_brands)]
 
@@ -292,10 +274,6 @@ def simulate_marketplace(nb_acheteurs,donnees_dict):
         brand.set_q(all_q)
         all_bids.append(brand.bid)
 
-
-    #print(all_bids)
-
-    #rd.shuffle(all_bids)
 
     def make_var(i):
         return pulp.LpVariable(f"w{i}", lowBound=0, cat="Integer")
@@ -346,35 +324,6 @@ def simulate_marketplace(nb_acheteurs,donnees_dict):
 
     return surplus
 
-
-
-'''
-#print(all_bids)
-
-for game in donnees_dict.keys():
-    print(f"Optimization pour le jeu {game}:")
-    optimization(filter_bid(all_bids, game))
-
-    #Permet de voir toutes les bids (pas que celles choisies)
-    print(f"Bids pour le jeu {game}:")
-    for bid in all_bids:
-        b, q = bid
-        if q[0] == game:
-            print(bid)
-    print("\n")
-
-
-#faire pour touts jeu si il y a une marque qui veut
-
-optimization(filter_bid(all_bids, "Final Fantasy VII"))
-#Permet de voir toutes les bids (pas que celles choisies)
-print(f"Bids for game '{"Final Fantasy VII"}':")
-for bid in all_bids:
-    b, q = bid
-    if q[0] == "Final Fantasy VII":
-        print(bid)
-
-'''
 
 def main():
     nb_marques = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000]
