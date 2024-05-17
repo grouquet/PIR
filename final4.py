@@ -99,52 +99,13 @@ def simulate_marketplace(nb_acheteurs,donnees_dict):
         for game_name, game_data in donnees_dict.items():
             q = [game_name] + [0]*q_size # On ajoute le nom du jeu au vecteur q
             for year, year_data in game_data.items():
+                year = str(year)
+                k = (year-2016)*12
                 for month, value in year_data.items():
-                    # On remplit q en fonction des données présentes par année et mois
-                    if year == "2016":
-                        k = 0
-                    elif year == "2017":
-                        k = 12
-                    elif year == "2018":
-                        k = 24
-                    elif year == "2019":
-                        k = 36
-                    elif year == "2020":
-                        k = 48
-                    elif year == "2021":
-                        k = 60
-                    elif year == "2022":
-                        k = 72
-                    elif year == "2023":
-                        k = 84
-                    
-                    j = 0
-                    if month == "01":
-                        j = 0
-                    elif month == "02":
-                        j = 1
-                    elif month == "03":
-                        j = 2
-                    elif month == "04":
-                        j = 3
-                    elif month == "05":
-                        j = 4
-                    elif month == "06":
-                        j = 5
-                    elif month == "07":
-                        j = 6
-                    elif month == "08":
-                        j = 7
-                    elif month == "09":
-                        j = 8
-                    elif month == "10":
-                        j = 9
-                    elif month == "11":
-                        j = 10
-                    elif month == "12":
-                        j = 11
-                    
-                    q[j+k+1]= 1 # +1 pour éviter de modifier la première entrée de q qui correspond au nom du jeu
+                    # on remplit q en fonction des données présentes par année et mois
+                    month = str(month)
+                    j = month - 1               
+                    q[j+k]= 1
             all_q.append(q)
         return all_q
 
